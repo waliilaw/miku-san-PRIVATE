@@ -1,12 +1,9 @@
 "use client"
-
-import type React from "react"
 import { useRef, useState, useEffect } from "react"
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
-import { EffectComposer, wrapEffect } from "@react-three/postprocessing"
 import * as THREE from "three"
 
-
+// Optimized but visually similar shader
 const waveVertexShader = `
 precision highp float;
 varying vec2 vUv;
@@ -18,8 +15,9 @@ void main() {
 }
 `
 
+// Optimized fragment shader that maintains visual quality
 const waveFragmentShader = `
-precision highp float;
+precision mediump float;
 uniform vec2 resolution;
 uniform float time;
 uniform float waveSpeed;
@@ -30,6 +28,7 @@ uniform vec2 mousePos;
 uniform int enableMouseInteraction;
 uniform float mouseRadius;
 
+// Optimized noise function
 vec4 mod289(vec4 x) { return x - floor(x * (1.0/289.0)) * 289.0; }
 vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
 vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
@@ -63,29 +62,48 @@ float cnoise(vec2 P) {
   return 2.3 * mix(n_x.x, n_x.y, fade_xy.y);
 }
 
-const int OCTAVES = 8;
+// Optimized for mobile but still visually appealing
+const int OCTAVES = 5; // Reduced from 8 but still looks good
 float fbm(vec2 p) {
   float value = 0.0;
   float amp = 1.0;
   float freq = waveFrequency;
-  for (int i = 0; i < OCTAVES; i++) {
-    value += amp * abs(cnoise(p));
-    p *= freq;
-    amp *= waveAmplitude;
-  }
+  
+  // Unroll the loop for better performance
+  value += amp * abs(cnoise(p));
+  p *= freq;
+  amp *= waveAmplitude;
+  
+  value += amp * abs(cnoise(p));
+  p *= freq;
+  amp *= waveAmplitude;
+  
+  value += amp * abs(cnoise(p));
+  p *= freq;
+  amp *= waveAmplitude;
+  
+  value += amp * abs(cnoise(p));
+  p *= freq;
+  amp *= waveAmplitude;
+  
+  value += amp * abs(cnoise(p));
+  
   return value;
 }
 
 float pattern(vec2 p) {
   vec2 p2 = p - time * waveSpeed;
-  return fbm(p - fbm(p + fbm(p2)));
+  return fbm(p - fbm(p2));
 }
 
 void main() {
   vec2 uv = gl_FragCoord.xy / resolution.xy;
   uv -= 0.5;
   uv.x *= resolution.x / resolution.y;
+  
+  // Optimize calculation for mobile
   float f = pattern(uv);
+  
   if (enableMouseInteraction == 1) {
     vec2 mouseNDC = (mousePos / resolution - 0.5) * vec2(1.0, -1.0);
     mouseNDC.x *= resolution.x / resolution.y;
@@ -93,6 +111,7 @@ void main() {
     float effect = 1.0 - smoothstep(0.0, mouseRadius, dist);
     f -= 0.5 * effect;
   }
+  
   vec3 col = mix(vec3(0.0), waveColor, f);
   gl_FragColor = vec4(col, 1.0);
 }
@@ -121,7 +140,6 @@ class RetroEffectImpl {
   }
 }
 
-
 interface WaveUniforms {
   [key: string]: THREE.Uniform<any>
   time: THREE.Uniform<number>
@@ -134,7 +152,6 @@ interface WaveUniforms {
   enableMouseInteraction: THREE.Uniform<number>
   mouseRadius: THREE.Uniform<number>
 }
-
 
 interface DitheredWavesProps {
   waveSpeed: number
@@ -163,6 +180,18 @@ function DitheredWaves({
   const effect = useRef<RetroEffectImpl>(null)
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const { viewport, size, gl } = useThree()
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   const waveUniformsRef = useRef({
     time: new THREE.Uniform(0),
@@ -172,30 +201,52 @@ function DitheredWaves({
     waveAmplitude: new THREE.Uniform(waveAmplitude),
     waveColor: new THREE.Uniform(new THREE.Color(...waveColor)),
     mousePos: new THREE.Uniform(new THREE.Vector2(0, 0)),
-    enableMouseInteraction: new THREE.Uniform(enableMouseInteraction ? 1 : 0),
+    enableMouseInteraction: new THREE.Uniform(enableMouseInteraction && !isMobile ? 1 : 0),
     mouseRadius: new THREE.Uniform(mouseRadius),
   })
 
   useEffect(() => {
     const dpr = gl.getPixelRatio()
-    const newWidth = Math.floor(size.width * dpr)
-    const newHeight = Math.floor(size.height * dpr)
+    // Use a slightly lower resolution for mobile devices but not too low
+    const scaleFactor = isMobile ? 0.75 : 1.0
+    const newWidth = Math.floor(size.width * dpr * scaleFactor)
+    const newHeight = Math.floor(size.height * dpr * scaleFactor)
     waveUniformsRef.current.resolution.value.set(newWidth, newHeight)
-  }, [size, gl])
+  }, [size, gl, isMobile])
+
+  // Use RAF throttling for smoother performance
+  const lastFrameTime = useRef(0)
+  const targetFPS = isMobile ? 30 : 60 // Target 30 FPS on mobile, 60 on desktop
 
   useFrame(({ clock }) => {
+    const currentTime = clock.getElapsedTime()
+    const deltaTime = currentTime - lastFrameTime.current
+    const interval = 1 / targetFPS
+
+    // Skip frame if we haven't reached the target interval
+    if (deltaTime < interval) return
+
+    // Update last frame time
+    lastFrameTime.current = currentTime - (deltaTime % interval)
+
     if (!disableAnimation) {
-      waveUniformsRef.current.time.value = clock.getElapsedTime()
+      // Keep the same animation speed for visual consistency
+      waveUniformsRef.current.time.value = currentTime
     }
+
     waveUniformsRef.current.waveSpeed.value = waveSpeed
     waveUniformsRef.current.waveFrequency.value = waveFrequency
     waveUniformsRef.current.waveAmplitude.value = waveAmplitude
     waveUniformsRef.current.waveColor.value.set(...waveColor)
-    waveUniformsRef.current.enableMouseInteraction.value = enableMouseInteraction ? 1 : 0
+
+    // Disable mouse interaction on mobile
+    waveUniformsRef.current.enableMouseInteraction.value = enableMouseInteraction && !isMobile ? 1 : 0
     waveUniformsRef.current.mouseRadius.value = mouseRadius
-    if (enableMouseInteraction) {
+
+    if (enableMouseInteraction && !isMobile) {
       waveUniformsRef.current.mousePos.value.set(mousePos.x, mousePos.y)
     }
+
     if (effect.current) {
       effect.current.colorNum = colorNum
       effect.current.pixelSize = pixelSize
@@ -203,7 +254,7 @@ function DitheredWaves({
   })
 
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
-    if (!enableMouseInteraction) return
+    if (!enableMouseInteraction || isMobile) return
     const rect = gl.domElement.getBoundingClientRect()
     const dpr = gl.getPixelRatio()
     const x = (e.clientX - rect.left) * dpr
@@ -221,15 +272,17 @@ function DitheredWaves({
           uniforms={waveUniformsRef.current}
         />
       </mesh>
-      <mesh
-        onPointerMove={handlePointerMove}
-        position={[0, 0, 0.01]}
-        scale={[viewport.width, viewport.height, 1]}
-        visible={false}
-      >
-        <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial transparent opacity={0} />
-      </mesh>
+      {!isMobile && (
+        <mesh
+          onPointerMove={handlePointerMove}
+          position={[0, 0, 0.01]}
+          scale={[viewport.width, viewport.height, 1]}
+          visible={false}
+        >
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+      )}
     </>
   )
 }
@@ -256,15 +309,40 @@ export default function Dither({
   disableAnimation = false,
   enableMouseInteraction = true,
   mouseRadius = 1,
-
 }: DitherProps) {
+  const [isMounted, setIsMounted] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
+
+  // Don't render on server or if not mounted
+  if (!isMounted) {
+    return null
+  }
+
   return (
-    <div style={{  position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: -1 }}>
+    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: -1 }}>
       <Canvas
         className="w-full h-full"
         camera={{ position: [0, 0, 6] }}
-        dpr={typeof window !== "undefined" ? window.devicePixelRatio : 1}
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
+        dpr={isMobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio}
+        gl={{
+          antialias: false, // Disable antialiasing for better performance
+          powerPreference: "high-performance",
+          preserveDrawingBuffer: true,
+          alpha: true,
+        }}
+        frameloop="always" // Keep animation smooth
+        performance={{ min: 0.5 }} // Allow ThreeJS to adjust performance
       >
         <DitheredWaves
           waveSpeed={waveSpeed}
