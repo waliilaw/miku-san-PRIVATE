@@ -6,19 +6,21 @@ import { useUser } from "@clerk/nextjs";
 
 const SSOCallback = () => {
   const router = useRouter();
-  const { isSignedIn, user, isLoaded } = useUser(); // Include isLoaded to check if user data is ready
+  const { isSignedIn, user, isLoaded } = useUser();
 
   useEffect(() => {
     console.log("isLoaded:", isLoaded);
     console.log("isSignedIn:", isSignedIn);
     console.log("user:", user);
-    
+
     if (isLoaded) {
       if (isSignedIn && user) {
         const username = user.username || user.primaryEmailAddress?.emailAddress?.split("@")[0] || `user-${user.id}`;
-        router.push(`/${username}/create`);
+        console.log("Redirecting to:", `/${username}/create`);
+        router.push(`/${username}/create`); // Redirect to the create page
       } else {
-        router.push("/sign-in");
+        console.log("User not signed in, redirecting to /sign-in");
+        router.push("/sign-in"); // Redirect to sign-in if not signed in
       }
     }
   }, [isLoaded, isSignedIn, user, router]);
