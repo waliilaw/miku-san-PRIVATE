@@ -51,7 +51,7 @@ const PortfolioPage = async ({ params }: PageProps) => {
       <div className="container mx-auto py-8 px-4 sm:px-6 relative z-10">
         {/* Header Section */}
         <div className="max-w-5xl mx-auto mb-8">
-          <Card className="p-8 bg-black/60 backdrop-blur-md border-none shadow-[0_0_25px rgba(57,197,187,0.2)] rounded-xl overflow-hidden">
+          <Card className="p-8 bg-black/60 backdrop-blur-md border-none  shadow-[0_0_25px rgba(57,197,187,0.2)] rounded-xl overflow-hidden">
             <div className="flex flex-col md:flex-row items-center justify-center gap-6">
               <div className="flex-shrink-0">
                 <div className="relative">
