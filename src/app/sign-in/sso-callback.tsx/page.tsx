@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSignIn } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 
 const SSOCallback = () => {
   const router = useRouter();
-  const { isSignedIn, user } = useSignIn();
+  const { isSignedIn, user } = useUser();
 
   useEffect(() => {
     if (isSignedIn && user) {
