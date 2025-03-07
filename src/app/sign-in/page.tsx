@@ -12,7 +12,7 @@ export default function SignInPage() {
     if (isSignedIn) {
       // Redirect to the create page or the user's edit page after signing in
       const username = "user-username"; // Replace with logic to get the actual username
-      router.push(`/${username}/edit`); // Redirect to the edit page
+      router.push(`/${username}/create`); // Redirect to the edit page
     }
   }, [isSignedIn, router]);
 
@@ -24,7 +24,7 @@ export default function SignInPage() {
           routing="path" 
           fallbackRedirectUrl="/create"
         />
-     
+ 
       </div>
     </div>
   );
