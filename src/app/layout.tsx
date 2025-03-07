@@ -34,7 +34,11 @@ export default function RootLayout({
   }, [pathname]) // This will trigger when the route changes
 
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      frontendApi="https://clerk.miku-san.waliilaw.me"
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      secretKey={process.env.CLERK_SECRET_KEY}
+    >
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
           {loading && <Loading />}
