@@ -35,7 +35,7 @@ export default function RootLayout({
 
   return (
     <ClerkProvider
-      frontendApi="https://clerk.miku-san.waliilaw.me"
+
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
       secretKey={process.env.CLERK_SECRET_KEY}
     >
