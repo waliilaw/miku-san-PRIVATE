@@ -36,7 +36,6 @@ export default function RootLayout({
   return (
     <ClerkProvider
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-      secretKey={process.env.CLERK_SECRET_KEY}
     >
       <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
