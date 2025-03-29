@@ -1,0 +1,10 @@
+@font-face {
+  font-family: 'CustomFont'; /* Name of your font */
+  src: url('/font.ttf') format('truetype'); /* Path to your font file */
+  font-weight: normal;
+  font-style: normal;
+}
+
+.portfolio-font {
+  font-family: 'CustomFont', sans-serif; /* Fallback to sans-serif */
+}

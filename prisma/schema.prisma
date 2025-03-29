@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Portfolio {
+  id          String      @id @default(cuid())
+  userId      String      @unique
+  username    String      @unique
+  name        String
+  title       String
+  bio         String
+  email       String
+
+  location    String
+  avatar      String?
+  skills      String[]
+  theme       String      @default("pink")
+  projects    Project[]
+  socialLinks SocialLinks?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Project {
+  id            String   @id @default(cuid())
+  title         String
+  description   String
+  image         String
+  technologies  String[]
+  liveUrl       String?
+  githubUrl     String?
+  portfolio     Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  portfolioId   String
+  order         Int      @default(0)
+}
+
+model SocialLinks {
+  id          String    @id @default(cuid())
+  github      String?
+  twitter     String?
+  linkedin    String?
+  instagram   String?
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  portfolioId String    @unique
+}
